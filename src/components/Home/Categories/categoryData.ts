@@ -1,43 +1,63 @@
 const data = [
   {
-    title: "Televisions",
+    title: "T-Con",
     id: 1,
-    img: "/images/categories/categories-01.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Laptop & PC",
+    title: "MotherBoard",
     id: 2,
-    img: "/images/categories/categories-02.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Mobile & Tablets",
+    title: "Power Supply",
     id: 3,
-    img: "/images/categories/categories-03.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Games & Videos",
+    title: "Combo Board",
     id: 4,
-    img: "/images/categories/categories-04.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Home Appliances",
+    title: "Scaler",
     id: 5,
-    img: "/images/categories/categories-05.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Health & Sports",
+    title: "Backlight",
     id: 6,
-    img: "/images/categories/categories-06.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Watches",
+    title: "Speaker",
     id: 7,
-    img: "/images/categories/categories-07.png",
+    img: "/images/hero/new-01.png",
   },
   {
-    title: "Televisions",
+    title: "IR Sensor",
     id: 8,
-    img: "/images/categories/categories-04.png",
+    img: "/images/hero/new-01.png",
+  },
+  {
+    title: "Wifi Dongel",
+    id: 9,
+    img: "/images/hero/new-01.png",
+  },
+  {
+    title: "Plazma Motherboard",
+    id: 10,
+    img: "/images/hero/new-01.png",
+  },
+  {
+    title: "Plazma Supply",
+    id: 11,
+    img: "/images/hero/new-01.png",
+  },
+  {
+    title: "Plazma Inverter Board",
+    id: 12,
+    img: "/images/hero/new-01.png",
   },
 ];
 

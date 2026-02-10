@@ -38,13 +38,18 @@ const Header = () => {
 
   const options = [
     { label: "All Categories", value: "0" },
-    { label: "Desktop", value: "1" },
-    { label: "Laptop", value: "2" },
-    { label: "Monitor", value: "3" },
-    { label: "Phone", value: "4" },
-    { label: "Watch", value: "5" },
-    { label: "Mouse", value: "6" },
-    { label: "Tablet", value: "7" },
+    { label: "T Con", value: "1" },
+    { label: "Motherboard", value: "2" },
+    { label: "Power Supply", value: "3" },
+    { label: "Combo Board", value: "4" },
+    { label: "Scaler", value: "5" },
+    { label: "Backlight", value: "6" },
+    { label: "Speaker", value: "7" },
+    { label: "IR Sensor", value: "8" },
+    { label: "Wifi Dongel", value: "9" },
+    { label: "Plazma Motherboard", value: "10" },
+    { label: "Plazma Supply", value: "11" },
+    { label: "Plazma Inverter Board", value: "12" },
   ];
 
   return (

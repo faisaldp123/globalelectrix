@@ -38,7 +38,7 @@ const HeroCarousal = () => {
             </div>
 
             <h1 className="font-semibold text-dark text-xl sm:text-3xl mb-3">
-              <a href="#">True Wireless Noise Cancelling Headphone</a>
+              <a href="#">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</a>
             </h1>
 
             <p>
@@ -55,7 +55,7 @@ const HeroCarousal = () => {
 
           <div>
             <Image
-              src="/images/hero/hero-01.png"
+              src="/images/hero/new-01.png"
               alt="headphone"
               width={351}
               height={358}
@@ -79,7 +79,7 @@ const HeroCarousal = () => {
             </div>
 
             <h1 className="font-semibold text-dark text-xl sm:text-3xl mb-3">
-              <a href="#">True Wireless Noise Cancelling Headphone</a>
+              <a href="#">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</a>
             </h1>
 
             <p>
@@ -97,7 +97,7 @@ const HeroCarousal = () => {
 
           <div>
             <Image
-              src="/images/hero/hero-01.png"
+              src="/images/hero/new-01.png"
               alt="headphone"
               width={351}
               height={358}
