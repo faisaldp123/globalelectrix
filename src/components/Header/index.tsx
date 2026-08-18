@@ -10,9 +10,13 @@ import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Menu } from "@/types/Menu";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<{ label: string; value: string }[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("0");
+  const [boardNames, setBoardNames] = useState<string[]>([]);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -48,10 +52,38 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleStickyMenu);
   }, []);
 
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    fetch(`${apiUrl}/products`)
+      .then((response) => response.json())
+      .then((data) => {
+        const products = Array.isArray(data?.products) ? data.products : [];
+        const names: string[] = products
+          .map((product: { brand?: { name?: string } | string; boardName?: string; manufacturer?: string }): string | undefined => {
+            if (typeof product.brand === "string") return product.brand;
+            return product.brand?.name || product.boardName || product.manufacturer;
+          })
+          .filter((name): name is string => typeof name === "string" && name.trim().length > 0);
+        setBoardNames(Array.from(new Set(names)).sort((a, b) => a.localeCompare(b)));
+      })
+      .catch(() => setBoardNames([]));
+  }, []);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    fetch(`${apiUrl}/categories`)
+      .then((response) => response.json())
+      .then((data) => Array.isArray(data) && setCategories(data.map((category: { _id: string; name: string }) => ({ label: category.name, value: category._id }))))
+      .catch(() => setCategories([]));
+  }, []);
+
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
     const query = searchQuery.trim();
-    if (query) router.push(`/shop-with-sidebar?search=${encodeURIComponent(query)}`);
+    const params = new URLSearchParams();
+    if (query) params.set("search", query);
+    if (selectedCategory !== "0") params.set("category", selectedCategory);
+    router.push(`/shop-with-sidebar${params.size ? `?${params.toString()}` : ""}`);
   };
 
   const signOut = () => {
@@ -63,21 +95,16 @@ const Header = () => {
     router.push("/");
   };
 
-  const options = [
-    { label: "All Categories", value: "0" },
-    { label: "T Con", value: "1" },
-    { label: "Motherboard", value: "2" },
-    { label: "Power Supply", value: "3" },
-    { label: "Combo Board", value: "4" },
-    { label: "Scaler", value: "5" },
-    { label: "Backlight", value: "6" },
-    { label: "Speaker", value: "7" },
-    { label: "IR Sensor", value: "8" },
-    { label: "Wifi Dongel", value: "9" },
-    { label: "Plazma Motherboard", value: "10" },
-    { label: "Plazma Supply", value: "11" },
-    { label: "Plazma Inverter Board", value: "12" },
-  ];
+  const options = [{ label: "All Categories", value: "0" }, ...categories];
+  const navigationMenu: Menu[] = menuData.map((item) => item.title.toLowerCase() === "pages" ? {
+    ...item,
+    submenu: boardNames.map((name, index) => ({
+      id: 1000 + index,
+      title: name,
+      newTab: false,
+      path: `/shop-with-sidebar?search=${encodeURIComponent(name)}`,
+    })),
+  } : item);
 
   return (
     <header
@@ -106,7 +133,7 @@ const Header = () => {
             <div className="max-w-[475px] w-full">
               <form onSubmit={handleSearch}>
                 <div className="flex items-center">
-                  <CustomSelect options={options} />
+                  <CustomSelect options={options} onChange={(option) => setSelectedCategory(option.value)} />
 
                   <div className="relative max-w-[333px] sm:min-w-[333px] w-full">
                     {/* <!-- divider --> */}
@@ -344,7 +371,7 @@ const Header = () => {
               {/* <!-- Main Nav Start --> */}
               <nav>
                 <ul className="flex xl:items-center flex-col xl:flex-row gap-5 xl:gap-6">
-                  {menuData.map((menuItem, i) =>
+                  {navigationMenu.map((menuItem, i) =>
                     menuItem.submenu ? (
                       <Dropdown
                         key={i}

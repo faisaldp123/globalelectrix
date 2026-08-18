@@ -163,7 +163,7 @@ const Checkout = () => {
                           <p className="text-dark">{item.title} (x{item.quantity})</p>
                         </div>
                         <div>
-                          <p className="text-dark text-right">${item.discountedPrice * item.quantity}</p>
+                          <p className="text-dark text-right">₹{item.discountedPrice * item.quantity}</p>
                         </div>
                       </div>
                     ))}
@@ -185,7 +185,7 @@ const Checkout = () => {
                       </div>
                       <div>
                         <p className="font-medium text-lg text-dark text-right">
-                          ${totalPrice}
+                          ₹{totalPrice}
                         </p>
                       </div>
                     </div>

@@ -1,22 +1,22 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import CustomSelect from "./CustomSelect";
 import CategoryDropdown from "./CategoryDropdown";
-import GenderDropdown from "./GenderDropdown";
-import SizeDropdown from "./SizeDropdown";
-import ColorsDropdwon from "./ColorsDropdwon";
 import PriceDropdown from "./PriceDropdown";
 import shopDataDummy from "../Shop/shopData";
 import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 
 const ShopWithSidebar = () => {
+  const searchParams = useSearchParams();
   const [productStyle, setProductStyle] = useState("grid");
   const [productSidebar, setProductSidebar] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedBoard, setSelectedBoard] = useState("");
   const [loading, setLoading] = useState(true);
 
   const handleStickyMenu = () => {
@@ -31,21 +31,6 @@ const ShopWithSidebar = () => {
     { label: "Latest Products", value: "0" },
     { label: "Best Selling", value: "1" },
     { label: "Old Products", value: "2" },
-  ];
-
-  const genders = [
-    {
-      name: "Men",
-      products: 10,
-    },
-    {
-      name: "Women",
-      products: 23,
-    },
-    {
-      name: "Unisex",
-      products: 8,
-    },
   ];
 
   useEffect(() => {
@@ -63,6 +48,9 @@ const ShopWithSidebar = () => {
             price: item.price,
             discountedPrice: item.price,
             reviews: item.reviewCount || 0,
+            categoryId: item.category?._id || item.category || item.categoryId,
+            categoryName: item.category?.name || item.categoryName || "",
+            boardName: item.brand?.name || item.brand || item.boardName || item.manufacturer || "",
             imgs: {
               thumbnails: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"],
               previews: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"]
@@ -91,6 +79,17 @@ const ShopWithSidebar = () => {
 
     fetchData();
   }, []);
+
+  const search = (searchParams.get("search") || "").trim().toLowerCase();
+  const category = searchParams.get("category") || "";
+  const boardNames = Array.from(new Set(products.map((product) => product.boardName).filter(Boolean))).sort();
+  const filteredProducts = products.filter((product) => {
+    const text = `${product.title} ${product.boardName} ${product.categoryName}`.toLowerCase();
+    const matchesSearch = !search || text.includes(search);
+    const matchesCategory = !category || product.categoryId === category || product.categoryName.toLowerCase() === category.toLowerCase();
+    const matchesBoard = !selectedBoard || product.boardName === selectedBoard;
+    return matchesSearch && matchesCategory && matchesBoard;
+  });
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
@@ -174,15 +173,6 @@ const ShopWithSidebar = () => {
                   {/* <!-- category box --> */}
                   <CategoryDropdown categories={categories} />
 
-                  {/* <!-- gender box --> */}
-                  <GenderDropdown genders={genders} />
-
-                  {/* // <!-- size box --> */}
-                  <SizeDropdown />
-
-                  {/* // <!-- color box --> */}
-                  <ColorsDropdwon />
-
                   {/* // <!-- price range box --> */}
                   <PriceDropdown />
                 </div>
@@ -199,7 +189,7 @@ const ShopWithSidebar = () => {
                     <CustomSelect options={options} />
 
                     <p>
-                      Showing <span className="text-dark">9 of 50</span>{" "}
+                      Showing <span className="text-dark">{filteredProducts.length} of {products.length}</span>{" "}
                       Products
                     </p>
                   </div>
@@ -295,8 +285,8 @@ const ShopWithSidebar = () => {
               >
                 {loading ? (
                   <p className="col-span-full text-center py-10">Loading products...</p>
-                ) : products.length > 0 ? (
-                  products.map((item, key) =>
+                ) : filteredProducts.length > 0 ? (
+                  filteredProducts.map((item, key) =>
                     productStyle === "grid" ? (
                       <SingleGridItem item={item} key={key} />
                     ) : (
@@ -307,6 +297,15 @@ const ShopWithSidebar = () => {
                   <p className="col-span-full text-center py-10">No products found</p>
                 )}
               </div>
+              {boardNames.length > 0 && (
+                <div className="mt-10 rounded-lg bg-white p-5 shadow-1">
+                  <p className="mb-3 text-dark">Available board brands</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setSelectedBoard("")} className={`rounded px-3 py-1.5 text-sm ${!selectedBoard ? "bg-blue text-white" : "bg-gray-1"}`}>All</button>
+                    {boardNames.map((board) => <button type="button" key={board} onClick={() => setSelectedBoard(board)} className={`rounded px-3 py-1.5 text-sm ${selectedBoard === board ? "bg-blue text-white" : "bg-gray-1"}`}>{board}</button>)}
+                  </div>
+                </div>
+              )}
               {/* <!-- Products Grid Tab Content End --> */}
 
               {/* <!-- Products Pagination Start --> */}
