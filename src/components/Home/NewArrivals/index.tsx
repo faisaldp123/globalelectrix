@@ -1,10 +1,31 @@
-import React from "react";
+"use client";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
-import shopData from "@/components/Shop/shopData";
 
 const NewArrival = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+        const res = await fetch(`${API_URL}/products?newArrival=true`);
+        const data = await res.json();
+        if (data && data.products) {
+          setProducts(data.products.slice(0, 4));
+        }
+      } catch (err) {
+        console.error("Failed to fetch new arrivals:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -47,10 +68,15 @@ const NewArrival = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
-          {/* <!-- New Arrivals item --> */}
-          {shopData.map((item, key) => (
-            <ProductItem item={item} key={key} />
-          ))}
+          {loading ? (
+            <p className="col-span-full text-center py-10">Loading products...</p>
+          ) : products.length > 0 ? (
+            products.map((item, key) => (
+              <ProductItem item={item} key={key} />
+            ))
+          ) : (
+            <p className="col-span-full text-center py-10">No products found</p>
+          )}
         </div>
       </div>
     </section>

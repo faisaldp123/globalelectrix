@@ -4,8 +4,8 @@ type InitialState = {
   items: WishListItem[];
 };
 
-type WishListItem = {
-  id: number;
+export type WishListItem = {
+  id: number | string;
   title: string;
   price: number;
   discountedPrice: number;
@@ -17,8 +17,27 @@ type WishListItem = {
   };
 };
 
+const getInitialWishlist = (): WishListItem[] => {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("wishlist_items");
+      return saved ? JSON.parse(saved) : [];
+    } catch (err) {
+      console.error("Failed to parse wishlist items:", err);
+      return [];
+    }
+  }
+  return [];
+};
+
 const initialState: InitialState = {
-  items: [],
+  items: getInitialWishlist(),
+};
+
+const saveWishlistToLocalStorage = (items: WishListItem[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("wishlist_items", JSON.stringify(items));
+  }
 };
 
 export const wishlist = createSlice({
@@ -43,14 +62,17 @@ export const wishlist = createSlice({
           status,
         });
       }
+      saveWishlistToLocalStorage(state.items);
     },
-    removeItemFromWishlist: (state, action: PayloadAction<number>) => {
+    removeItemFromWishlist: (state, action: PayloadAction<number | string>) => {
       const itemId = action.payload;
       state.items = state.items.filter((item) => item.id !== itemId);
+      saveWishlistToLocalStorage(state.items);
     },
 
     removeAllItemsFromWishlist: (state) => {
       state.items = [];
+      saveWishlistToLocalStorage([]);
     },
   },
 });

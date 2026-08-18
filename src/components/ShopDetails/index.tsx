@@ -1,13 +1,20 @@
 "use client";
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
-import { useAppSelector } from "@/redux/store";
+import { AppDispatch, useAppSelector } from "@/redux/store";
+import { addItemToWishlist, removeItemFromWishlist } from "@/redux/features/wishlist-slice";
+import { useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const ShopDetails = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const [activeColor, setActiveColor] = useState("blue");
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
@@ -18,6 +25,11 @@ const ShopDetails = () => {
   const [quantity, setQuantity] = useState(1);
 
   const [activeTab, setActiveTab] = useState("tabOne");
+  const [loadedProduct, setLoadedProduct] = useState<any>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const searchParams = useSearchParams();
 
   const storages = [
     {
@@ -75,20 +87,147 @@ const ShopDetails = () => {
 
   const colors = ["red", "blue", "orange", "pink", "purple"];
 
-  const alreadyExist = localStorage.getItem("productDetails");
+  const alreadyExist = typeof window !== "undefined" ? localStorage.getItem("productDetails") : null;
   const productFromStorage = useAppSelector(
     (state) => state.productDetailsReducer.value
   );
 
-  const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
+  let storedProduct = null;
+  try {
+    storedProduct = alreadyExist ? JSON.parse(alreadyExist) : null;
+  } catch {
+    storedProduct = null;
+  }
+  const product = loadedProduct || storedProduct || productFromStorage;
+  const wishlistItems = useAppSelector((state) => state.wishlistReducer.items);
+  const isWishlisted = wishlistItems.some(
+    (item) => item.id === (product?.id || product?._id)
+  );
+  const productDescription =
+    product?.description ||
+    product?.shortDescription ||
+    product?.details ||
+    `Reliable ${product?.title || "TV spare part"} for professional repairs. Please compare the product images, part number, and connector layout with your existing board before ordering.`;
+  const productId = product?.id || product?._id;
+  const specificationRows = [
+    ["Brand", product?.brand],
+    ["Model number", product?.modelNumber],
+    ["Category", product?.category?.name || product?.category],
+    ["Board number", product?.specifications?.boardNumber],
+    ["Compatible brand", product?.specifications?.compatibleBrand],
+    ["Screen size", product?.specifications?.screenSize],
+    ["Resolution", product?.specifications?.resolution],
+    ["Panel type", product?.specifications?.panelType],
+    ["Ports", product?.specifications?.ports],
+  ].filter(([, value]) => Boolean(value));
+
+  const loadReviews = async () => {
+    if (!productId) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    try {
+      const response = await fetch(`${apiUrl}/reviews`);
+      const allReviews = await response.json();
+      setReviews(
+        Array.isArray(allReviews)
+          ? allReviews.filter((review) => String(review.productId?._id || review.productId) === String(productId))
+          : []
+      );
+    } catch {
+      setReviews([]);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem("productDetails", JSON.stringify(product));
+    const productId = searchParams.get("product");
+    if (!productId) return;
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    fetch(`${API_URL}/products/${encodeURIComponent(productId)}`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => {
+        const item = data.product || data;
+        const sourceImages = Array.isArray(item.images) && item.images.length ? item.images : ["/images/hero/new-01.png"];
+        setLoadedProduct({
+          ...item,
+          id: item._id || item.id,
+          title: item.name || item.title || "Product",
+          discountedPrice: item.discountedPrice ?? item.price ?? 0,
+          price: item.price ?? 0,
+          imgs: item.imgs || { thumbnails: sourceImages, previews: sourceImages },
+        });
+      })
+      .catch(() => undefined);
+  }, [searchParams]);
+
+  useEffect(() => {
+    loadReviews();
+  }, [productId]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("productDetails", JSON.stringify(product));
   }, [product]);
 
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
     openPreviewModal();
+  };
+
+  const handleWishlistToggle = () => {
+    const productId = product.id || product._id;
+
+    if (isWishlisted) {
+      dispatch(removeItemFromWishlist(productId));
+      toast.success(`${product.title || "Product"} removed from wishlist`);
+      return;
+    }
+
+    if (!localStorage.getItem("userToken")) {
+      toast.error("Please sign in before saving a wishlist item");
+      router.push("/signin?next=/wishlist");
+      return;
+    }
+
+    dispatch(
+      addItemToWishlist({
+        id: productId,
+        title: product.title || product.name || "Product",
+        price: product.price ?? 0,
+        discountedPrice: product.discountedPrice ?? product.price ?? 0,
+        imgs: product.imgs,
+        quantity: 1,
+        status: "available",
+      })
+    );
+    toast.success(`${product.title || "Product"} added to wishlist!`);
+  };
+
+  const handleReviewSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      toast.error("Please sign in to submit a review");
+      router.push("/signin?next=/shop-details");
+      return;
+    }
+    if (!reviewComment.trim()) {
+      toast.error("Please enter your review");
+      return;
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    const response = await fetch(`${apiUrl}/reviews/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ productId, rating: reviewRating, comment: reviewComment.trim() }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toast.error(data.message || "Could not submit your review");
+      return;
+    }
+    setReviewComment("");
+    toast.success("Your review has been published");
+    loadReviews();
   };
 
   return (
@@ -316,11 +455,11 @@ const ShopDetails = () => {
 
                   <h3 className="font-medium text-custom-1 mb-4.5">
                     <span className="text-sm sm:text-base text-dark">
-                      Price: ${product.price}
+                      Price: ₹{product.price}
                     </span>
                     <span className="line-through">
                       {" "}
-                      ${product.discountedPrice}{" "}
+                      ₹{product.discountedPrice}{" "}
                     </span>
                   </h3>
 
@@ -371,6 +510,7 @@ const ShopDetails = () => {
                   </ul>
 
                   <form onSubmit={(e) => e.preventDefault()}>
+                    {false && (
                     <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-9 py-9">
                       {/* <!-- details item --> */}
                       <div className="flex items-center gap-4">
@@ -610,6 +750,12 @@ const ShopDetails = () => {
                         </div>
                       </div>
                     </div>
+                    )}
+
+                    <div className="mt-6 rounded-lg border border-gray-3 bg-gray-1 px-5 py-4 text-sm leading-6 text-dark-4 mb-7.5">
+                      <h3 className="mb-1 font-medium text-dark">Product description</h3>
+                      <p>{productDescription}</p>
+                    </div>
 
                     <div className="flex flex-wrap items-center gap-4.5">
                       <div className="flex items-center rounded-md border border-gray-3">
@@ -671,9 +817,15 @@ const ShopDetails = () => {
                         Purchase Now
                       </a>
 
-                      <a
-                        href="#"
-                        className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 ease-out duration-200 hover:text-white hover:bg-dark hover:border-transparent"
+                      <button
+                        type="button"
+                        onClick={handleWishlistToggle}
+                        aria-label={isWishlisted ? "Remove product from wishlist" : "Add product to wishlist"}
+                        className={`flex h-12 w-12 items-center justify-center rounded-full bg-gray-2 text-dark ease-out duration-200 hover:text-red ${
+                          isWishlisted
+                            ? "text-red"
+                            : ""
+                        }`}
                       >
                         <svg
                           className="fill-current"
@@ -686,11 +838,11 @@ const ShopDetails = () => {
                           <path
                             fillRule="evenodd"
                             clipRule="evenodd"
-                            d="M5.62436 4.42423C3.96537 5.18256 2.75 6.98626 2.75 9.13713C2.75 11.3345 3.64922 13.0283 4.93829 14.4798C6.00072 15.6761 7.28684 16.6677 8.54113 17.6346C8.83904 17.8643 9.13515 18.0926 9.42605 18.3219C9.95208 18.7366 10.4213 19.1006 10.8736 19.3649C11.3261 19.6293 11.6904 19.75 12 19.75C12.3096 19.75 12.6739 19.6293 13.1264 19.3649C13.5787 19.1006 14.0479 18.7366 14.574 18.3219C14.8649 18.0926 15.161 17.8643 15.4589 17.6346C16.7132 16.6677 17.9993 15.6761 19.0617 14.4798C20.3508 13.0283 21.25 11.3345 21.25 9.13713C21.25 6.98626 20.0346 5.18256 18.3756 4.42423C16.7639 3.68751 14.5983 3.88261 12.5404 6.02077C12.399 6.16766 12.2039 6.25067 12 6.25067C11.7961 6.25067 11.601 6.16766 11.4596 6.02077C9.40166 3.88261 7.23607 3.68751 5.62436 4.42423ZM12 4.45885C9.68795 2.39027 7.09896 2.1009 5.00076 3.05999C2.78471 4.07296 1.25 6.42506 1.25 9.13713C1.25 11.8027 2.3605 13.8361 3.81672 15.4758C4.98287 16.789 6.41022 17.888 7.67083 18.8586C7.95659 19.0786 8.23378 19.2921 8.49742 19.4999C9.00965 19.9037 9.55954 20.3343 10.1168 20.66C10.6739 20.9855 11.3096 21.25 12 21.25C12.6904 21.25 13.3261 20.9855 13.8832 20.66C14.4405 20.3343 14.9903 19.9037 15.5026 19.4999C15.7662 19.2921 16.0434 19.0786 16.3292 18.8586C17.5898 17.888 19.0171 16.789 20.1833 15.4758C21.6395 13.8361 22.75 11.8027 22.75 9.13713C22.75 6.42506 21.2153 4.07296 18.9992 3.05999C16.901 2.1009 14.3121 2.39027 12 4.45885Z"
-                            fill=""
+                            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"
+                            fill="currentColor"
                           />
                         </svg>
-                      </a>
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -729,23 +881,7 @@ const ShopDetails = () => {
                       Specifications:
                     </h2>
 
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p className="mb-6">
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
-                    </p>
-                    <p>
-                      with the release of Letraset sheets containing Lorem Ipsum
-                      passages, and more recently with desktop publishing
-                      software like Aldus PageMaker including versions.
-                    </p>
+                    <p className="leading-7 text-dark-4">{productDescription}</p>
                   </div>
 
                   <div className="max-w-[447px] w-full">
@@ -753,17 +889,8 @@ const ShopDetails = () => {
                       Care & Maintenance:
                     </h2>
 
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p>
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
+                    <p className="leading-7 text-dark-4">
+                      Inspect the images and product details before purchase. For compatibility questions, contact us with your existing board&apos;s part number and photos of its connectors.
                     </p>
                   </div>
                 </div>
@@ -776,6 +903,17 @@ const ShopDetails = () => {
                   className={`rounded-xl bg-white shadow-1 p-4 sm:p-6 mt-10 ${activeTab === "tabTwo" ? "block" : "hidden"
                     }`}
                 >
+                  {specificationRows.length ? (
+                    specificationRows.map(([label, value]) => (
+                      <div key={label as string} className="flex rounded-md px-4 py-4 even:bg-gray-1 sm:px-5">
+                        <p className="min-w-[140px] max-w-[450px] w-full text-sm text-dark sm:text-base">{label}</p>
+                        <p className="w-full text-sm text-dark-4 sm:text-base">{value as string}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-4 text-dark-4">Additional product information will be added soon.</p>
+                  )}
+                  {false && <>
                   {/* <!-- info item --> */}
                   <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
                     <div className="max-w-[450px] min-w-[140px] w-full">
@@ -908,6 +1046,7 @@ const ShopDetails = () => {
                       </p>
                     </div>
                   </div>
+                  </>}
                 </div>
               </div>
               {/* <!-- tab content two end --> */}
@@ -918,6 +1057,44 @@ const ShopDetails = () => {
                   className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabThree" ? "flex" : "hidden"
                     }`}
                 >
+                  <div className="max-w-[570px] w-full">
+                    <h2 className="mb-9 font-medium text-2xl text-dark">
+                      {reviews.length} {reviews.length === 1 ? "Review" : "Reviews"} for this product
+                    </h2>
+                    <div className="flex flex-col gap-6">
+                      {reviews.length ? reviews.map((review) => (
+                        <article key={review._id} className="rounded-xl bg-white p-5 shadow-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="font-medium text-dark">{review.userId?.name || "Customer"}</h3>
+                              <p className="text-custom-sm text-dark-4">{new Date(review.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <span className="font-medium text-[#FBB040]">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                          </div>
+                          <p className="mt-4 text-dark-4">{review.comment}</p>
+                        </article>
+                      )) : (
+                        <p className="rounded-xl bg-white p-5 text-dark-4 shadow-1">No reviews yet. Be the first to review this product.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="max-w-[550px] w-full">
+                    <form onSubmit={handleReviewSubmit} className="rounded-xl bg-white p-5 shadow-1 sm:p-6">
+                      <h2 className="mb-4 font-medium text-2xl text-dark">Add a Review</h2>
+                      <label className="mb-2 block text-dark">Your rating</label>
+                      <div className="mb-5 flex gap-1">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <button key={rating} type="button" onClick={() => setReviewRating(rating)} className={rating <= reviewRating ? "text-[#FBB040]" : "text-gray-4"} aria-label={`${rating} star rating`}>★</button>
+                        ))}
+                      </div>
+                      <label htmlFor="review-comment" className="mb-2 block text-dark">Your review</label>
+                      <textarea id="review-comment" required maxLength={250} rows={5} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} placeholder="Share your experience" className="mb-5 w-full rounded-md border border-gray-3 bg-gray-1 p-4 outline-none focus:ring-2 focus:ring-blue/20" />
+                      <button type="submit" className="inline-flex rounded-md bg-blue px-7 py-3 font-medium text-white hover:bg-blue-dark">Submit Review</button>
+                    </form>
+                  </div>
+
+                  {false && <>
                   <div className="max-w-[570px] w-full">
                     <h2 className="font-medium text-2xl text-dark mb-9">
                       03 Review for this product
@@ -1428,6 +1605,7 @@ const ShopDetails = () => {
                       </div>
                     </form>
                   </div>
+                  </>}
                 </div>
               </div>
               {/* <!-- tab content three end --> */}

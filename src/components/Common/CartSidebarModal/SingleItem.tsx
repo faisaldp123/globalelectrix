@@ -1,10 +1,21 @@
 import React from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
+import { CartItem, removeItemFromCart } from "@/redux/features/cart-slice";
 import Image from "next/image";
 
-const SingleItem = ({ item, removeItemFromCart }) => {
+type SingleItemProps = {
+  item: CartItem;
+  removeItemFromCart: typeof removeItemFromCart;
+};
+
+const SingleItem = ({ item, removeItemFromCart }: SingleItemProps) => {
   const dispatch = useDispatch<AppDispatch>();
+  // Older cart entries may not contain image data, so never pass an empty src to Next Image.
+  const thumbnail =
+    item.imgs?.thumbnails?.[0] ||
+    item.imgs?.previews?.[0] ||
+    "/images/hero/new-01.png";
 
   const handleRemoveFromCart = () => {
     dispatch(removeItemFromCart(item.id));
@@ -14,7 +25,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
     <div className="flex items-center justify-between gap-5">
       <div className="w-full flex items-center gap-6">
         <div className="flex items-center justify-center rounded-[10px] bg-gray-3 max-w-[90px] w-full h-22.5">
-          <Image src={item.imgs?.thumbnails[0]} alt="product" width={100} height={100} />
+          <Image src={thumbnail} alt={item.title || "product"} width={100} height={100} />
         </div>
 
         <div>

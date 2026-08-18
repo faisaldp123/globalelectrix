@@ -1,17 +1,34 @@
 "use client";
 import React from "react";
-import shopData from "@/components/Shop/shopData";
-import ProductItem from "@/components/Common/ProductItem";
 import Image from "next/image";
-import Link from "next/link";
+import CategoryItem from "@/components/Home/Categories/SingleItem";
 
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "swiper/css/navigation";
 import "swiper/css";
 
 const RecentlyViewdItems = () => {
   const sliderRef = useRef(null);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    fetch(`${apiUrl}/categories`)
+      .then((response) => response.json())
+      .then((items) =>
+        setCategories(
+          Array.isArray(items)
+            ? items.map((item) => ({
+                id: item._id,
+                title: item.name,
+                img: item.image || "/images/categories/category-01.png",
+              }))
+            : []
+        )
+      )
+      .catch(() => setCategories([]));
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
@@ -89,9 +106,9 @@ const RecentlyViewdItems = () => {
             spaceBetween={20}
             className="justify-between"
           >
-            {shopData.map((item, key) => (
-              <SwiperSlide key={key}>
-                <ProductItem item={item} />
+            {categories.map((item) => (
+              <SwiperSlide key={item.id}>
+                <CategoryItem item={item} />
               </SwiperSlide>
             ))}
           </Swiper>
