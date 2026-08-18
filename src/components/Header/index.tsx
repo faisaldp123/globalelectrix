@@ -9,14 +9,19 @@ import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
+  const router = useRouter();
   const { openCartModal } = useCartModalContext();
 
   const product = useAppSelector((state) => state.cartReducer.items);
+  const wishlistItems = useAppSelector((state) => state.wishlistReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
 
   const handleOpenCartModal = () => {
@@ -34,7 +39,29 @@ const Header = () => {
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
-  });
+    try {
+      const savedUser = localStorage.getItem("userInfo");
+      setUser(savedUser ? JSON.parse(savedUser) : null);
+    } catch {
+      setUser(null);
+    }
+    return () => window.removeEventListener("scroll", handleStickyMenu);
+  }, []);
+
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (query) router.push(`/shop-with-sidebar?search=${encodeURIComponent(query)}`);
+  };
+
+  const signOut = () => {
+    if (!window.confirm("Do you want to log out of your account?")) return;
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("userInfo");
+    setUser(null);
+    setAccountMenuOpen(false);
+    router.push("/");
+  };
 
   const options = [
     { label: "All Categories", value: "0" },
@@ -77,7 +104,7 @@ const Header = () => {
             </Link>
 
             <div className="max-w-[475px] w-full">
-              <form>
+              <form onSubmit={handleSearch}>
                 <div className="flex items-center">
                   <CustomSelect options={options} />
 
@@ -163,7 +190,8 @@ const Header = () => {
 
             <div className="flex w-full lg:w-auto justify-between items-center gap-5">
               <div className="flex items-center gap-5">
-                <Link href="/signin" className="flex items-center gap-2.5">
+                <div className="relative">
+                <button type="button" onClick={() => user ? setAccountMenuOpen(!accountMenuOpen) : router.push("/signin")} className="flex items-center gap-2.5 text-left">
                   <svg
                     width="24"
                     height="24"
@@ -190,10 +218,19 @@ const Header = () => {
                       account
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
-                      Sign In
+                      {user?.name || "Sign In"}
                     </p>
                   </div>
-                </Link>
+                </button>
+                {user && accountMenuOpen && (
+                  <div className="absolute right-0 top-full mt-3 z-50 w-48 rounded-lg border border-gray-3 bg-white p-2 shadow-lg">
+                    <Link href="/my-account" onClick={() => setAccountMenuOpen(false)} className="block rounded px-3 py-2 text-sm hover:bg-gray-1">My profile</Link>
+                    <Link href="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block rounded px-3 py-2 text-sm hover:bg-gray-1">Wishlist</Link>
+                    <Link href="/cart" onClick={() => setAccountMenuOpen(false)} className="block rounded px-3 py-2 text-sm hover:bg-gray-1">My cart</Link>
+                    <button type="button" onClick={signOut} className="block w-full rounded px-3 py-2 text-left text-sm text-red hover:bg-gray-1">Sign out</button>
+                  </div>
+                )}
+                </div>
 
                 <button
                   onClick={handleOpenCartModal}
@@ -241,7 +278,7 @@ const Header = () => {
                       cart
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
-                      ${totalPrice}
+                      ₹{totalPrice}
                     </p>
                   </div>
                 </button>
@@ -342,7 +379,7 @@ const Header = () => {
                 <li className="py-4">
                   <a
                     href="#"
-                    className="flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue"
+                    className="relative flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue"
                   >
                     <svg
                       className="fill-current"
@@ -368,7 +405,7 @@ const Header = () => {
                 <li className="py-4">
                   <Link
                     href="/wishlist"
-                    className="flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue"
+                    className="relative flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue"
                   >
                     <svg
                       className="fill-current"
@@ -384,6 +421,11 @@ const Header = () => {
                       />
                     </svg>
                     Wishlist
+                    {wishlistItems.length > 0 && (
+                      <span className="absolute -right-2 -top-1 text-[11px] font-semibold text-red">
+                        {wishlistItems.length}
+                      </span>
+                    )}
                   </Link>
                 </li>
               </ul>

@@ -13,6 +13,10 @@ import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 const SingleItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
   const dispatch = useDispatch<AppDispatch>();
+  const previewImage =
+    item.imgs?.previews?.[0] ||
+    item.imgs?.thumbnails?.[0] ||
+    "/images/hero/new-01.png";
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
@@ -91,7 +95,7 @@ const SingleItem = ({ item }: { item: Product }) => {
         </div>
 
         <div className="flex justify-center items-center">
-          <Image src={item.imgs.previews[0]} alt="" width={280} height={280} />
+          <Image src={previewImage} alt={item.title} width={280} height={280} />
         </div>
 
         <div className="absolute right-0 bottom-0 translate-x-full u-w-full flex flex-col gap-2 p-5.5 ease-linear duration-300 group-hover:translate-x-0">

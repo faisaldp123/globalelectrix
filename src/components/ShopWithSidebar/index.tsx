@@ -7,7 +7,7 @@ import GenderDropdown from "./GenderDropdown";
 import SizeDropdown from "./SizeDropdown";
 import ColorsDropdwon from "./ColorsDropdwon";
 import PriceDropdown from "./PriceDropdown";
-import shopData from "../Shop/shopData";
+import shopDataDummy from "../Shop/shopData";
 import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 
@@ -15,6 +15,9 @@ const ShopWithSidebar = () => {
   const [productStyle, setProductStyle] = useState("grid");
   const [productSidebar, setProductSidebar] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const handleStickyMenu = () => {
     if (window.scrollY >= 80) {
@@ -28,39 +31,6 @@ const ShopWithSidebar = () => {
     { label: "Latest Products", value: "0" },
     { label: "Best Selling", value: "1" },
     { label: "Old Products", value: "2" },
-  ];
-
-  const categories = [
-    {
-      name: "Desktop",
-      products: 10,
-      isRefined: true,
-    },
-    {
-      name: "Laptop",
-      products: 12,
-      isRefined: false,
-    },
-    {
-      name: "Monitor",
-      products: 30,
-      isRefined: false,
-    },
-    {
-      name: "UPS",
-      products: 23,
-      isRefined: false,
-    },
-    {
-      name: "Phone",
-      products: 10,
-      isRefined: false,
-    },
-    {
-      name: "Watch",
-      products: 13,
-      isRefined: false,
-    },
   ];
 
   const genders = [
@@ -79,10 +49,54 @@ const ShopWithSidebar = () => {
   ];
 
   useEffect(() => {
+    const fetchData = async () => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+      try {
+        setLoading(true);
+        // Fetch products
+        const productsRes = await fetch(`${API_URL}/products`);
+        const productsData = await productsRes.json();
+        if (productsData && productsData.products) {
+          const mapped = productsData.products.map((item: any) => ({
+            id: item._id,
+            title: item.name,
+            price: item.price,
+            discountedPrice: item.price,
+            reviews: item.reviewCount || 0,
+            imgs: {
+              thumbnails: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"],
+              previews: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"]
+            }
+          }));
+          setProducts(mapped);
+        }
+
+        // Fetch categories
+        const categoriesRes = await fetch(`${API_URL}/categories`);
+        const categoriesData = await categoriesRes.json();
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData.map(c => ({
+            name: c.name,
+            products: 10,
+            isRefined: false,
+            id: c._id
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch shop details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
 
     // closing sidebar while clicking outside
-    function handleClickOutside(event) {
+    function handleClickOutside(event: any) {
       if (!event.target.closest(".sidebar-content")) {
         setProductSidebar(false);
       }
@@ -94,8 +108,9 @@ const ShopWithSidebar = () => {
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleStickyMenu);
     };
-  });
+  }, [productSidebar]);
 
   return (
     <>
@@ -278,12 +293,18 @@ const ShopWithSidebar = () => {
                     : "flex flex-col gap-7.5"
                 }`}
               >
-                {shopData.map((item, key) =>
-                  productStyle === "grid" ? (
-                    <SingleGridItem item={item} key={key} />
-                  ) : (
-                    <SingleListItem item={item} key={key} />
+                {loading ? (
+                  <p className="col-span-full text-center py-10">Loading products...</p>
+                ) : products.length > 0 ? (
+                  products.map((item, key) =>
+                    productStyle === "grid" ? (
+                      <SingleGridItem item={item} key={key} />
+                    ) : (
+                      <SingleListItem item={item} key={key} />
+                    )
                   )
+                ) : (
+                  <p className="col-span-full text-center py-10">No products found</p>
                 )}
               </div>
               {/* <!-- Products Grid Tab Content End --> */}

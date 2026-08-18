@@ -5,8 +5,8 @@ type InitialState = {
   items: CartItem[];
 };
 
-type CartItem = {
-  id: number;
+export type CartItem = {
+  id: number | string;
   title: string;
   price: number;
   discountedPrice: number;
@@ -17,8 +17,27 @@ type CartItem = {
   };
 };
 
+const getInitialCart = (): CartItem[] => {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("cart_items");
+      return saved ? JSON.parse(saved) : [];
+    } catch (err) {
+      console.error("Failed to parse cart items:", err);
+      return [];
+    }
+  }
+  return [];
+};
+
 const initialState: InitialState = {
-  items: [],
+  items: getInitialCart(),
+};
+
+const saveCartToLocalStorage = (items: CartItem[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("cart_items", JSON.stringify(items));
+  }
 };
 
 export const cart = createSlice({
@@ -42,14 +61,16 @@ export const cart = createSlice({
           imgs,
         });
       }
+      saveCartToLocalStorage(state.items);
     },
-    removeItemFromCart: (state, action: PayloadAction<number>) => {
+    removeItemFromCart: (state, action: PayloadAction<number | string>) => {
       const itemId = action.payload;
       state.items = state.items.filter((item) => item.id !== itemId);
+      saveCartToLocalStorage(state.items);
     },
     updateCartItemQuantity: (
       state,
-      action: PayloadAction<{ id: number; quantity: number }>
+      action: PayloadAction<{ id: number | string; quantity: number }>
     ) => {
       const { id, quantity } = action.payload;
       const existingItem = state.items.find((item) => item.id === id);
@@ -57,10 +78,12 @@ export const cart = createSlice({
       if (existingItem) {
         existingItem.quantity = quantity;
       }
+      saveCartToLocalStorage(state.items);
     },
 
     removeAllItemsFromCart: (state) => {
       state.items = [];
+      saveCartToLocalStorage([]);
     },
   },
 });

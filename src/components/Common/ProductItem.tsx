@@ -10,45 +10,89 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
-
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  // Extract variables safely to handle both mock data and backend schema models
+  const id = item.id || (item as any)._id;
+  const title = item.title || (item as any).name || "Product";
+  const price = item.price || 0;
+  const discountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : price;
+  const reviews = item.reviews !== undefined ? item.reviews : ((item as any).reviewCount || 0);
+
+  const images = item.imgs || {
+    thumbnails: (item as any).images || ["/images/hero/new-01.png"],
+    previews: (item as any).images || ["/images/hero/new-01.png"]
+  };
+  const mainImage = images.previews[0] || "/images/hero/new-01.png";
+
+  const normalizedItem = {
+    id,
+    title,
+    price,
+    discountedPrice,
+    imgs: images,
+    quantity: 1
+  };
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
-    dispatch(updateQuickView({ ...item }));
+    dispatch(updateQuickView(normalizedItem));
   };
 
   // add to cart
   const handleAddToCart = () => {
-    dispatch(
-      addItemToCart({
-        ...item,
-        quantity: 1,
-      })
-    );
+    if (!localStorage.getItem("userToken")) {
+      toast.error("Please sign in before adding items to your cart");
+      router.push("/signin?next=/shop-details");
+      return;
+    }
+    dispatch(addItemToCart(normalizedItem));
+    toast.success(`${title} added to cart!`, {
+      style: {
+        borderRadius: '8px',
+        background: '#111',
+        color: '#fff',
+      }
+    });
   };
 
   const handleItemToWishList = () => {
+    if (!localStorage.getItem("userToken")) {
+      toast.error("Please sign in before saving a wishlist item");
+      router.push("/signin?next=/wishlist");
+      return;
+    }
     dispatch(
       addItemToWishlist({
-        ...item,
+        ...normalizedItem,
         status: "available",
-        quantity: 1,
       })
     );
+    toast.success(`${title} added to wishlist!`, {
+      style: {
+        borderRadius: '8px',
+        background: '#111',
+        color: '#fff',
+      }
+    });
   };
 
   const handleProductDetails = () => {
-    dispatch(updateproductDetails({ ...item }));
+    dispatch(updateproductDetails(normalizedItem));
   };
 
   return (
     <div className="group">
       <div className="relative overflow-hidden flex items-center justify-center rounded-lg bg-[#F6F7FB] min-h-[270px] mb-4">
-        <Image src={item.imgs.previews[0]} alt="" width={250} height={250} />
+        <Link href={`/shop-details?product=${encodeURIComponent(String(id))}`} onClick={handleProductDetails} aria-label={`View ${title}`}>
+          <Image src={mainImage} alt={title} width={250} height={250} style={{ objectFit: "contain" }} />
+        </Link>
 
         <div className="absolute left-0 bottom-0 translate-y-full w-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0">
           <button
@@ -149,19 +193,19 @@ const ProductItem = ({ item }: { item: Product }) => {
           />
         </div>
 
-        <p className="text-custom-sm">({item.reviews})</p>
+        <p className="text-custom-sm">({reviews})</p>
       </div>
 
       <h3
         className="font-medium text-dark ease-out duration-200 hover:text-blue mb-1.5"
         onClick={() => handleProductDetails()}
       >
-        <Link href="/shop-details"> {item.title} </Link>
+        <Link href={`/shop-details?product=${encodeURIComponent(String(id))}`}> {title} </Link>
       </h3>
 
       <span className="flex items-center gap-2 font-medium text-lg">
-        <span className="text-dark">${item.discountedPrice}</span>
-        <span className="text-dark-4 line-through">${item.price}</span>
+        <span className="text-dark">₹{discountedPrice}</span>
+        <span className="text-dark-4 line-through">₹{price}</span>
       </span>
     </div>
   );

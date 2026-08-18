@@ -1,7 +1,6 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useRef, useEffect } from "react";
-import data from "./categoryData";
+import { useCallback, useRef, useEffect, useState } from "react";
 import Image from "next/image";
 
 // Import Swiper styles
@@ -11,6 +10,7 @@ import SingleItem from "./SingleItem";
 
 const Categories = () => {
   const sliderRef = useRef(null);
+  const [categories, setCategories] = useState<any[]>([]);
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
@@ -26,6 +26,11 @@ const Categories = () => {
     if (sliderRef.current) {
       sliderRef.current.swiper.init();
     }
+  }, []);
+
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
+    fetch(`${url}/categories`).then((r) => r.json()).then((items) => setCategories(items.filter((item: any) => item.isFeatured !== false).map((item: any) => ({ title: item.name, img: item.image || "/images/categories/category-01.png" })))).catch(console.error);
   }, []);
 
   return (
@@ -134,7 +139,7 @@ const Categories = () => {
               },
             }}
           >
-            {data.map((item, key) => (
+            {categories.map((item, key) => (
               <SwiperSlide key={key}>
                 <SingleItem item={item} />
               </SwiperSlide>
