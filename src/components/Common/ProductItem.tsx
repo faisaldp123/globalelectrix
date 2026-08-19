@@ -25,10 +25,15 @@ const ProductItem = ({ item }: { item: Product }) => {
   const discountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : price;
   const reviews = item.reviews !== undefined ? item.reviews : ((item as any).reviewCount || 0);
 
-  const images = item.imgs || {
-    thumbnails: (item as any).images || ["/images/hero/new-01.png"],
-    previews: (item as any).images || ["/images/hero/new-01.png"]
-  };
+  const apiImages = Array.isArray((item as any).images)
+    ? (item as any).images.filter((image: unknown) => typeof image === "string" && image.trim())
+    : [];
+  const productImages = apiImages.length
+    ? apiImages
+    : typeof (item as any).seo?.ogImage === "string" && (item as any).seo.ogImage.trim()
+      ? [(item as any).seo.ogImage]
+      : ["/images/hero/new-01.png"];
+  const images = item.imgs || { thumbnails: productImages, previews: productImages };
   const mainImage = images.previews[0] || "/images/hero/new-01.png";
 
   const normalizedItem = {
