@@ -25,9 +25,18 @@ const ProductItem = ({ item }: { item: Product }) => {
   const discountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : price;
   const reviews = item.reviews !== undefined ? item.reviews : ((item as any).reviewCount || 0);
 
+  const apiImages = Array.isArray((item as any).images)
+    ? (item as any).images.filter((image: unknown) => typeof image === "string" && image.trim())
+    : [];
+  const apiOgImage = (item as any).seo?.ogImage;
+  const productImages = apiImages.length
+    ? apiImages
+    : typeof apiOgImage === "string" && apiOgImage.trim()
+      ? [apiOgImage]
+      : ["/images/hero/new-01.png"];
   const images = item.imgs || {
-    thumbnails: (item as any).images || ["/images/hero/new-01.png"],
-    previews: (item as any).images || ["/images/hero/new-01.png"]
+    thumbnails: productImages,
+    previews: productImages
   };
   const mainImage = images.previews[0] || "/images/hero/new-01.png";
 
