@@ -30,11 +30,10 @@ const ProductItem = ({ item }: { item: Product }) => {
     : [];
   const productImages = apiImages.length
     ? apiImages
-    : ["/images/hero/new-01.png"];
-  const images = item.imgs || {
-    thumbnails: productImages,
-    previews: productImages
-  };
+    : typeof (item as any).seo?.ogImage === "string" && (item as any).seo.ogImage.trim()
+      ? [(item as any).seo.ogImage]
+      : ["/images/hero/new-01.png"];
+  const images = item.imgs || { thumbnails: productImages, previews: productImages };
   const mainImage = images.previews[0] || "/images/hero/new-01.png";
 
   const normalizedItem = {
