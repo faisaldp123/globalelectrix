@@ -146,7 +146,9 @@ const ShopDetails = () => {
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data) => {
         const item = data.product || data;
-        const sourceImages = Array.isArray(item.images) && item.images.length ? item.images : ["/images/hero/new-01.png"];
+        const sourceImages = Array.isArray(item.images) && item.images.length
+          ? item.images
+          : ["/images/hero/new-01.png"];
         setLoadedProduct({
           ...item,
           id: item._id || item.id,
