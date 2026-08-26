@@ -16,7 +16,9 @@ export default function BestSeller() {
             const images = Array.isArray(item.images)
               ? item.images.filter((image: unknown) => typeof image === "string" && image.trim())
               : [];
-            const productImages = images.length ? images : ["/images/hero/new-01.png"];
+            const productImages = images.length
+              ? images
+              : ["/images/hero/new-01.png"];
 
             return {
               ...item,

@@ -28,12 +28,9 @@ const ProductItem = ({ item }: { item: Product }) => {
   const apiImages = Array.isArray((item as any).images)
     ? (item as any).images.filter((image: unknown) => typeof image === "string" && image.trim())
     : [];
-  const apiOgImage = (item as any).seo?.ogImage;
   const productImages = apiImages.length
     ? apiImages
-    : typeof apiOgImage === "string" && apiOgImage.trim()
-      ? [apiOgImage]
-      : ["/images/hero/new-01.png"];
+    : ["/images/hero/new-01.png"];
   const images = item.imgs || {
     thumbnails: productImages,
     previews: productImages
