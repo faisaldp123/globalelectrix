@@ -42,8 +42,9 @@ const ShopWithSidebar = () => {
         // Fetch products
         const productsRes = await fetch(`${API_URL}/products`);
         const productsData = await productsRes.json();
+        let mappedProducts: any[] = [];
         if (productsData && productsData.products) {
-          const mapped = productsData.products.map((item: any) => ({
+          mappedProducts = productsData.products.map((item: any) => ({
             id: item._id,
             title: item.name,
             price: item.price,
@@ -57,8 +58,8 @@ const ShopWithSidebar = () => {
               previews: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"]
             }
           }));
-          setProducts(mapped);
-          const prices = mapped.map((product: any) => Number(product.price) || 0);
+          setProducts(mappedProducts);
+          const prices = mappedProducts.map((product: any) => Number(product.price) || 0);
           setPriceRange([Math.min(...prices, 0), Math.max(...prices, 0)]);
         }
 
@@ -68,7 +69,7 @@ const ShopWithSidebar = () => {
         if (Array.isArray(categoriesData)) {
           setCategories(categoriesData.map(c => ({
             name: c.name,
-            products: mapped.filter((product: any) => product.categoryId === c._id).length,
+            products: mappedProducts.filter((product: any) => product.categoryId === c._id).length,
             isRefined: false,
             id: c._id
           })));
