@@ -83,7 +83,7 @@ const Header = () => {
     const params = new URLSearchParams();
     if (query) params.set("search", query);
     if (selectedCategory !== "0") params.set("category", selectedCategory);
-    router.push(`/shop-with-sidebar${params.size ? `?${params.toString()}` : ""}`);
+    router.push(`/shop${params.size ? `?${params.toString()}` : ""}`);
   };
 
   const signOut = () => {
@@ -98,11 +98,12 @@ const Header = () => {
   const options = [{ label: "All Categories", value: "0" }, ...categories];
   const navigationMenu: Menu[] = menuData.map((item) => item.title.toLowerCase() === "pages" ? {
     ...item,
-    submenu: boardNames.map((name, index) => ({
+    title: "All Categories",
+    submenu: categories.map((category, index) => ({
       id: 1000 + index,
-      title: name,
+      title: category.label,
       newTab: false,
-      path: `/shop-with-sidebar?search=${encodeURIComponent(name)}`,
+      path: `/shop?category=${encodeURIComponent(category.value)}`,
     })),
   } : item);
 

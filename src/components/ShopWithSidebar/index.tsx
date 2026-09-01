@@ -5,7 +5,6 @@ import Breadcrumb from "../Common/Breadcrumb";
 import CustomSelect from "./CustomSelect";
 import CategoryDropdown from "./CategoryDropdown";
 import PriceDropdown from "./PriceDropdown";
-import shopDataDummy from "../Shop/shopData";
 import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 
@@ -17,6 +16,8 @@ const ShopWithSidebar = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedBoard, setSelectedBoard] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
   const [loading, setLoading] = useState(true);
 
   const handleStickyMenu = () => {
@@ -41,8 +42,9 @@ const ShopWithSidebar = () => {
         // Fetch products
         const productsRes = await fetch(`${API_URL}/products`);
         const productsData = await productsRes.json();
+        let mappedProducts: any[] = [];
         if (productsData && productsData.products) {
-          const mapped = productsData.products.map((item: any) => ({
+          mappedProducts = productsData.products.map((item: any) => ({
             id: item._id,
             title: item.name,
             price: item.price,
@@ -56,7 +58,9 @@ const ShopWithSidebar = () => {
               previews: item.images && item.images.length ? item.images : ["/images/hero/new-01.png"]
             }
           }));
-          setProducts(mapped);
+          setProducts(mappedProducts);
+          const prices = mappedProducts.map((product: any) => Number(product.price) || 0);
+          setPriceRange([Math.min(...prices, 0), Math.max(...prices, 0)]);
         }
 
         // Fetch categories
@@ -65,7 +69,7 @@ const ShopWithSidebar = () => {
         if (Array.isArray(categoriesData)) {
           setCategories(categoriesData.map(c => ({
             name: c.name,
-            products: 10,
+            products: mappedProducts.filter((product: any) => product.categoryId === c._id).length,
             isRefined: false,
             id: c._id
           })));
@@ -82,14 +86,26 @@ const ShopWithSidebar = () => {
 
   const search = (searchParams.get("search") || "").trim().toLowerCase();
   const category = searchParams.get("category") || "";
+  const priceBounds: [number, number] = products.length
+    ? [Math.min(...products.map((product) => Number(product.price) || 0)), Math.max(...products.map((product) => Number(product.price) || 0))]
+    : [0, 0];
   const boardNames = Array.from(new Set(products.map((product) => product.boardName).filter(Boolean))).sort();
   const filteredProducts = products.filter((product) => {
     const text = `${product.title} ${product.boardName} ${product.categoryName}`.toLowerCase();
     const matchesSearch = !search || text.includes(search);
-    const matchesCategory = !category || product.categoryId === category || product.categoryName.toLowerCase() === category.toLowerCase();
+    const matchesCategory = (!category || product.categoryId === category || product.categoryName.toLowerCase() === category.toLowerCase())
+      && (!selectedCategoryIds.length || selectedCategoryIds.includes(product.categoryId));
     const matchesBoard = !selectedBoard || product.boardName === selectedBoard;
-    return matchesSearch && matchesCategory && matchesBoard;
+    const matchesPrice = Number(product.price) >= priceRange[0] && Number(product.price) <= priceRange[1];
+    return matchesSearch && matchesCategory && matchesBoard && matchesPrice;
   });
+
+  const toggleCategory = (id: string) => setSelectedCategoryIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const clearFilters = () => {
+    setSelectedCategoryIds([]);
+    setSelectedBoard("");
+    setPriceRange(priceBounds);
+  };
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
@@ -166,15 +182,17 @@ const ShopWithSidebar = () => {
                   <div className="bg-white shadow-1 rounded-lg py-4 px-5">
                     <div className="flex items-center justify-between">
                       <p>Filters:</p>
-                      <button className="text-blue">Clean All</button>
+                      <button type="button" onClick={clearFilters} className="text-blue">Clear all</button>
                     </div>
                   </div>
 
                   {/* <!-- category box --> */}
-                  <CategoryDropdown categories={categories} />
+                  <CategoryDropdown categories={categories} selectedIds={selectedCategoryIds} onToggle={toggleCategory} />
 
                   {/* // <!-- price range box --> */}
-                  <PriceDropdown />
+                  <PriceDropdown min={priceBounds[0]} max={priceBounds[1]} value={priceRange} onChange={setPriceRange} />
+
+                  {boardNames.length > 0 && <div className="rounded-lg bg-white p-5 shadow-1"><p className="mb-3 text-dark">Brand</p><div className="flex flex-col gap-2">{boardNames.map((board) => <button type="button" key={board} onClick={() => setSelectedBoard(selectedBoard === board ? "" : board)} className={`text-left text-sm hover:text-blue ${selectedBoard === board ? "text-blue font-medium" : "text-dark-4"}`}>{board}</button>)}</div></div>}
                 </div>
               </form>
             </div>
@@ -297,15 +315,6 @@ const ShopWithSidebar = () => {
                   <p className="col-span-full text-center py-10">No products found</p>
                 )}
               </div>
-              {boardNames.length > 0 && (
-                <div className="mt-10 rounded-lg bg-white p-5 shadow-1">
-                  <p className="mb-3 text-dark">Available board brands</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setSelectedBoard("")} className={`rounded px-3 py-1.5 text-sm ${!selectedBoard ? "bg-blue text-white" : "bg-gray-1"}`}>All</button>
-                    {boardNames.map((board) => <button type="button" key={board} onClick={() => setSelectedBoard(board)} className={`rounded px-3 py-1.5 text-sm ${selectedBoard === board ? "bg-blue text-white" : "bg-gray-1"}`}>{board}</button>)}
-                  </div>
-                </div>
-              )}
               {/* <!-- Products Grid Tab Content End --> */}
 
               {/* <!-- Products Pagination Start --> */}

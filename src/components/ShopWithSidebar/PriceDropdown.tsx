@@ -2,13 +2,10 @@ import { useState } from 'react';
 import RangeSlider from 'react-range-slider-input';
 import 'react-range-slider-input/dist/style.css';
 
-const PriceDropdown = () => {
+const PriceDropdown = ({ value, min, max, onChange }) => {
   const [toggleDropdown, setToggleDropdown] = useState(true);
 
-  const [selectedPrice, setSelectedPrice] = useState({
-    from: 0,
-    to: 100,
-  });
+  const selectedPrice = { from: value[0], to: value[1] };
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
@@ -50,12 +47,12 @@ const PriceDropdown = () => {
             <RangeSlider
               id="range-slider-gradient"
               className="margin-lg"
-              step={'any'}
+              min={min}
+              max={max}
+              value={value}
+              step={1}
               onInput={(e) =>
-                setSelectedPrice({
-                  from: Math.floor(e[0]),
-                  to: Math.ceil(e[1]),
-                })
+                onChange([Math.floor(e[0]), Math.ceil(e[1])])
               }
             />
 

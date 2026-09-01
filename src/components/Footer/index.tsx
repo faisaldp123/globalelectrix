@@ -81,7 +81,7 @@ const Footer = () => {
                       fill="#3C50E0"
                     />
                   </svg>
-                  support@example.com
+                  support@allindiaboards.com
                 </a>
               </li>
             </ul>
