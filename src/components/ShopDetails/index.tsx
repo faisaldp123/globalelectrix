@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
@@ -30,6 +30,7 @@ const ShopDetails = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const searchParams = useSearchParams();
+  const params = useParams<{ id?: string }>();
 
   const storages = [
     {
@@ -138,7 +139,7 @@ const ShopDetails = () => {
   };
 
   useEffect(() => {
-    const productId = searchParams.get("product");
+    const productId = params?.id || searchParams.get("product");
     if (!productId) return;
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://all-india-boards-admin-backend.onrender.com/api";
@@ -159,7 +160,7 @@ const ShopDetails = () => {
         });
       })
       .catch(() => undefined);
-  }, [searchParams]);
+  }, [params?.id, searchParams]);
 
   useEffect(() => {
     loadReviews();
@@ -234,7 +235,7 @@ const ShopDetails = () => {
 
   return (
     <>
-      <Breadcrumb title={"Shop Details"} pages={["shop details"]} />
+      <Breadcrumb title={product?.title || "Product details"} pages={["Products", product?.title || "Product details"]} />
 
       {product.title === "" ? (
         "Please add product"
